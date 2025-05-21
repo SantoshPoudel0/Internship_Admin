@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Table, Button, Spinner, Modal } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../../utils/constants';
+import useNotification from '../../components/useNotification';
+import NotificationBanner from '../../components/NotificationBanner';
 
 const ServicesList = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteServiceId, setDeleteServiceId] = useState(null);
+  const { error, setError, success, setSuccess, showSuccess } = useNotification();
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -22,16 +26,24 @@ const ServicesList = () => {
     };
 
     fetchServices();
-  }, []);
+  }, [setError]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this service?')) {
-      try {
-        await axios.delete(`${API_URL}/api/services/${id}`);
-        setServices(services.filter(service => service._id !== id));
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to delete service');
-      }
+  const handleDeleteRequest = (id) => {
+    setDeleteServiceId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteServiceId) return;
+    try {
+      await axios.delete(`${API_URL}/api/services/${deleteServiceId}`);
+      setServices(services.filter(service => service._id !== deleteServiceId));
+      showSuccess('Service deleted successfully.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete service');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteServiceId(null);
     }
   };
 
@@ -52,7 +64,7 @@ const ServicesList = () => {
         </Link>
       </div>
 
-      {error && <Alert variant="danger">{error}</Alert>}
+      <NotificationBanner error={error} success={success} setError={setError} setSuccess={setSuccess} />
 
       <Table striped bordered hover responsive>
         <thead>
@@ -78,13 +90,31 @@ const ServicesList = () => {
                 <td>{service.order}</td>
                 <td>
                   <Link to={`/services/edit/${service._id}`} className="btn btn-sm btn-info me-2">Edit</Link>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(service._id)}>Delete</Button>
+                  <Button variant="danger" size="sm" onClick={() => handleDeleteRequest(service._id)}>Delete</Button>
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </Table>
+
+      {/* Delete confirmation modal */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Are you sure you want to delete this service?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDeleteConfirm}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

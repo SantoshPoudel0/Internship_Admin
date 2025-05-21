@@ -9,7 +9,8 @@ import {
   faComments,
   faEnvelope,
   faUsers,
-  faRightFromBracket
+  faRightFromBracket,
+  faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../context/AuthContext';
 
@@ -40,9 +41,9 @@ const Sidebar = () => {
           <FontAwesomeIcon icon={faGraduationCap} className="me-2" />
           Trainings
         </NavLink>
-        <NavLink to="/reviews" className={({ isActive }) => isActive ? 'active' : ''}>
-          <FontAwesomeIcon icon={faComments} className="me-2" />
-          Reviews
+        <NavLink to="/bookings" className={({ isActive }) => isActive ? 'active' : ''}>
+          <FontAwesomeIcon icon={faCalendarCheck} className="me-2" />
+          Bookings
         </NavLink>
         <NavLink to="/contacts" className={({ isActive }) => isActive ? 'active' : ''}>
           <FontAwesomeIcon icon={faEnvelope} className="me-2" />

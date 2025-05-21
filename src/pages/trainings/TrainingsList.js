@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Spinner, Alert, Image } from 'react-bootstrap';
+import { Container, Table, Button, Spinner, Modal, Image } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../../utils/constants';
+import useNotification from '../../components/useNotification';
+import NotificationBanner from '../../components/NotificationBanner';
 
 const TrainingsList = () => {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTrainingId, setDeleteTrainingId] = useState(null);
+  const { error, setError, success, setSuccess, showSuccess } = useNotification();
 
   useEffect(() => {
     const fetchTrainings = async () => {
@@ -22,16 +26,24 @@ const TrainingsList = () => {
     };
 
     fetchTrainings();
-  }, []);
+  }, [setError]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this training?')) {
-      try {
-        await axios.delete(`${API_URL}/api/trainings/${id}`);
-        setTrainings(trainings.filter(training => training._id !== id));
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to delete training');
-      }
+  const handleDeleteRequest = (id) => {
+    setDeleteTrainingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTrainingId) return;
+    try {
+      await axios.delete(`${API_URL}/api/trainings/${deleteTrainingId}`);
+      setTrainings(trainings.filter(training => training._id !== deleteTrainingId));
+      showSuccess('Training deleted successfully.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete training');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTrainingId(null);
     }
   };
 
@@ -52,7 +64,7 @@ const TrainingsList = () => {
         </Link>
       </div>
 
-      {error && <Alert variant="danger">{error}</Alert>}
+      <NotificationBanner error={error} success={success} setError={setError} setSuccess={setSuccess} />
 
       <Table striped bordered hover responsive>
         <thead>
@@ -91,13 +103,31 @@ const TrainingsList = () => {
                 <td>{training.featured ? 'Yes' : 'No'}</td>
                 <td>
                   <Link to={`/trainings/edit/${training._id}`} className="btn btn-sm btn-info me-2">Edit</Link>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(training._id)}>Delete</Button>
+                  <Button variant="danger" size="sm" onClick={() => handleDeleteRequest(training._id)}>Delete</Button>
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </Table>
+
+      {/* Delete confirmation modal */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Are you sure you want to delete this training?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDeleteConfirm}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

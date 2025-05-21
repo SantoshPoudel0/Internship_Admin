@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Button, Card, Alert, Spinner, Row, Col, Image } from 'react-bootstrap';
+import { Container, Form, Button, Card, Alert, Spinner, Row, Col, Image, ListGroup, InputGroup } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../../utils/constants';
@@ -16,13 +16,23 @@ const TrainingForm = () => {
     price: 0,
     discount: 0,
     featured: false,
-    order: 0
+    order: 0,
+    learningTopics: [],
+    instructor: {
+      name: '',
+      title: '',
+      bio: '',
+      imageUrl: ''
+    }
   });
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [instructorImage, setInstructorImage] = useState(null);
+  const [instructorImagePreview, setInstructorImagePreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validated, setValidated] = useState(false);
+  const [newTopic, setNewTopic] = useState('');
   
   useEffect(() => {
     if (isEditMode) {
@@ -30,11 +40,25 @@ const TrainingForm = () => {
         try {
           setLoading(true);
           const { data } = await axios.get(`${API_URL}/api/trainings/${id}`);
-          setTraining(data);
+          setTraining({
+            ...data,
+            learningTopics: data.learningTopics || [],
+            instructor: data.instructor || {
+              name: '',
+              title: '',
+              bio: '',
+              imageUrl: ''
+            }
+          });
           
           // Set image preview if available
           if (data.imageUrl && data.imageUrl !== 'default-training.jpg') {
             setImagePreview(`${API_URL}/uploads/${data.imageUrl}`);
+          }
+          
+          // Set instructor image preview if available
+          if (data.instructor && data.instructor.imageUrl && data.instructor.imageUrl !== 'default-instructor.jpg') {
+            setInstructorImagePreview(`${API_URL}/uploads/${data.instructor.imageUrl}`);
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Failed to fetch training details');
@@ -55,12 +79,50 @@ const TrainingForm = () => {
     });
   };
   
+  const handleInstructorChange = (e) => {
+    const { name, value } = e.target;
+    setTraining({
+      ...training,
+      instructor: {
+        ...training.instructor,
+        [name]: value
+      }
+    });
+  };
+  
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
+  };
+  
+  const handleInstructorImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setInstructorImage(file);
+      setInstructorImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const addLearningTopic = () => {
+    if (newTopic.trim()) {
+      setTraining({
+        ...training,
+        learningTopics: [...training.learningTopics, newTopic.trim()]
+      });
+      setNewTopic('');
+    }
+  };
+
+  const removeLearningTopic = (index) => {
+    const updatedTopics = [...training.learningTopics];
+    updatedTopics.splice(index, 1);
+    setTraining({
+      ...training,
+      learningTopics: updatedTopics
+    });
   };
   
   const handleSubmit = async (e) => {
@@ -82,12 +144,31 @@ const TrainingForm = () => {
       
       // Add training data to form
       Object.keys(training).forEach(key => {
-        formData.append(key, training[key]);
+        if (key === 'learningTopics') {
+          // Handle array data for FormData
+          training.learningTopics.forEach((topic, index) => {
+            formData.append(`learningTopics[${index}]`, topic);
+          });
+        } else if (key === 'instructor') {
+          // Handle instructor object
+          Object.keys(training.instructor).forEach(instructorKey => {
+            if (instructorKey !== 'imageUrl') {
+              formData.append(`instructor[${instructorKey}]`, training.instructor[instructorKey]);
+            }
+          });
+        } else {
+          formData.append(key, training[key]);
+        }
       });
       
       // Add image if selected
       if (image) {
         formData.append('image', image);
+      }
+      
+      // Add instructor image if selected
+      if (instructorImage) {
+        formData.append('instructorImage', instructorImage);
       }
       
       if (isEditMode) {
@@ -158,6 +239,114 @@ const TrainingForm = () => {
               </Form.Control.Feedback>
             </Form.Group>
             
+            <Form.Group className="mb-4" controlId="learningTopics">
+              <Form.Label>What You Can Learn</Form.Label>
+              <InputGroup className="mb-3">
+                <Form.Control
+                  type="text"
+                  value={newTopic}
+                  onChange={(e) => setNewTopic(e.target.value)}
+                  placeholder="Enter a learning topic"
+                />
+                <Button 
+                  variant="outline-primary" 
+                  onClick={addLearningTopic}
+                  disabled={!newTopic.trim()}
+                >
+                  Add Topic
+                </Button>
+              </InputGroup>
+              <ListGroup>
+                {training.learningTopics.length > 0 ? (
+                  training.learningTopics.map((topic, index) => (
+                    <ListGroup.Item 
+                      key={index} 
+                      className="d-flex justify-content-between align-items-center"
+                    >
+                      {topic}
+                      <Button 
+                        variant="outline-danger" 
+                        size="sm" 
+                        onClick={() => removeLearningTopic(index)}
+                      >
+                        Remove
+                      </Button>
+                    </ListGroup.Item>
+                  ))
+                ) : (
+                  <p className="text-muted">No learning topics added yet. Add topics that describe what students will learn from this training.</p>
+                )}
+              </ListGroup>
+            </Form.Group>
+            
+            <Card className="mb-4">
+              <Card.Header>
+                <h5 className="mb-0">Instructor Information</h5>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3" controlId="instructorName">
+                      <Form.Label>Instructor Name</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="name"
+                        placeholder="Enter instructor name"
+                        value={training.instructor.name}
+                        onChange={handleInstructorChange}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3" controlId="instructorTitle">
+                      <Form.Label>Instructor Title/Position</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="title"
+                        placeholder="e.g. Senior Web Developer"
+                        value={training.instructor.title}
+                        onChange={handleInstructorChange}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-3" controlId="instructorBio">
+                  <Form.Label>Instructor Bio</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    name="bio"
+                    rows={3}
+                    placeholder="Brief description about the instructor"
+                    value={training.instructor.bio}
+                    onChange={handleInstructorChange}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3" controlId="instructorImage">
+                  <Form.Label>Instructor Image</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
+                    onChange={handleInstructorImageChange}
+                  />
+                  <Form.Text className="text-muted">
+                    Upload an image of the instructor (recommended size: 200x200px)
+                  </Form.Text>
+                </Form.Group>
+                
+                {instructorImagePreview && (
+                  <div className="mb-3">
+                    <p>Instructor Image Preview:</p>
+                    <Image 
+                      src={instructorImagePreview} 
+                      alt="Instructor preview" 
+                      style={{ maxWidth: '150px', maxHeight: '150px' }} 
+                      roundedCircle
+                    />
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+            
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="duration">
@@ -193,7 +382,7 @@ const TrainingForm = () => {
             
             {imagePreview && (
               <div className="mb-3">
-                <p>Image Preview:</p>
+                <p>Training Image Preview:</p>
                 <Image 
                   src={imagePreview} 
                   alt="Training preview" 

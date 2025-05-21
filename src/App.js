@@ -9,8 +9,6 @@ import ServiceForm from './pages/services/ServiceForm';
 import TrainingsList from './pages/trainings/TrainingsList';
 import TrainingForm from './pages/trainings/TrainingForm';
 import BookingsList from './pages/bookings/BookingsList';
-import ReviewsList from './pages/reviews/ReviewsList';
-import ReviewDetails from './pages/reviews/ReviewDetails';
 import ContactsList from './pages/contacts/ContactsList';
 import ContactDetails from './pages/contacts/ContactDetails';
 import UsersList from './pages/users/UsersList';
@@ -53,8 +51,6 @@ function Layout() {
             <Route path="/trainings/new" element={<TrainingForm />} />
             <Route path="/trainings/edit/:id" element={<TrainingForm />} />
             <Route path="/bookings" element={<BookingsList />} />
-            <Route path="/reviews" element={<ReviewsList />} />
-            <Route path="/reviews/:id" element={<ReviewDetails />} />
             <Route path="/contacts" element={<ContactsList />} />
             <Route path="/contacts/:id" element={<ContactDetails />} />
             <Route path="/users" element={<UsersList />} />
