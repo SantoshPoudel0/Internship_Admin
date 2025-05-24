@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Container, Table, Button, Badge, Spinner, Alert, Dropdown, Modal, Overlay, Popover } from 'react-bootstrap';
-import axios from 'axios';
-import { API_URL } from '../../utils/constants';
+import { AuthContext } from '../../context/AuthContext';
 
 const BookingsList = () => {
+  const { api } = useContext(AuthContext);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,17 +24,21 @@ const BookingsList = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/api/bookings`);
+        const { data } = await api.get('/api/bookings');
         setBookings(data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch bookings');
+        if (err.response?.status === 401) {
+          setError('Please log in to view bookings');
+        } else {
+          setError(err.response?.data?.message || 'Failed to fetch bookings');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchBookings();
-  }, []);
+  }, [api]);
 
   const handleDeleteRequest = (id) => {
     setDeleteBookingId(id);
@@ -44,7 +48,7 @@ const BookingsList = () => {
   const handleDeleteConfirm = async () => {
     if (!deleteBookingId) return;
     try {
-      await axios.delete(`${API_URL}/api/bookings/${deleteBookingId}`);
+      await api.delete(`/api/bookings/${deleteBookingId}`);
       setBookings(bookings.filter(booking => booking._id !== deleteBookingId));
       setShowModal(false);
       showSuccess('Booking deleted successfully.');
@@ -68,7 +72,7 @@ const BookingsList = () => {
   const handleStatusChangeConfirm = async () => {
     if (!pendingBookingId || !pendingStatus) return;
     try {
-      const { data } = await axios.put(`${API_URL}/api/bookings/${pendingBookingId}`, { status: pendingStatus });
+      const { data } = await api.put(`/api/bookings/${pendingBookingId}`, { status: pendingStatus });
       setBookings(bookings.map(booking => 
         booking._id === pendingBookingId ? { ...booking, status: data.status } : booking
       ));

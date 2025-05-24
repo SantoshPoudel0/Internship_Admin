@@ -4,8 +4,6 @@ import { Container, Row, Col } from 'react-bootstrap';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import ServicesList from './pages/services/ServicesList';
-import ServiceForm from './pages/services/ServiceForm';
 import TrainingsList from './pages/trainings/TrainingsList';
 import TrainingForm from './pages/trainings/TrainingForm';
 import BookingsList from './pages/bookings/BookingsList';
@@ -13,6 +11,8 @@ import ContactsList from './pages/contacts/ContactsList';
 import ContactDetails from './pages/contacts/ContactDetails';
 import UsersList from './pages/users/UsersList';
 import UserForm from './pages/users/UserForm';
+import MenuItemsList from './pages/menu/MenuItemsList';
+import MenuItemForm from './pages/menu/MenuItemForm';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -36,30 +36,26 @@ function App() {
 
 function Layout() {
   return (
-    <Container fluid>
-      <Row>
-        <Col md={2} className="p-0">
-          <Sidebar />
-        </Col>
-        <Col md={10} className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/services" element={<ServicesList />} />
-            <Route path="/services/new" element={<ServiceForm />} />
-            <Route path="/services/edit/:id" element={<ServiceForm />} />
-            <Route path="/trainings" element={<TrainingsList />} />
-            <Route path="/trainings/new" element={<TrainingForm />} />
-            <Route path="/trainings/edit/:id" element={<TrainingForm />} />
-            <Route path="/bookings" element={<BookingsList />} />
-            <Route path="/contacts" element={<ContactsList />} />
-            <Route path="/contacts/:id" element={<ContactDetails />} />
-            <Route path="/users" element={<UsersList />} />
-            <Route path="/users/new" element={<UserForm />} />
-            <Route path="/users/edit/:id" element={<UserForm />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Col>
-      </Row>
+    <Container fluid className="p-0">
+      <Sidebar />
+      <div className="main-content">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/trainings" element={<TrainingsList />} />
+          <Route path="/trainings/new" element={<TrainingForm />} />
+          <Route path="/trainings/edit/:id" element={<TrainingForm />} />
+          <Route path="/bookings" element={<BookingsList />} />
+          <Route path="/contacts" element={<ContactsList />} />
+          <Route path="/contacts/:id" element={<ContactDetails />} />
+          <Route path="/users" element={<UsersList />} />
+          <Route path="/users/new" element={<UserForm />} />
+          <Route path="/users/edit/:id" element={<UserForm />} />
+          <Route path="/menu-items" element={<MenuItemsList />} />
+          <Route path="/menu-items/new" element={<MenuItemForm />} />
+          <Route path="/menu-items/edit/:id" element={<MenuItemForm />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
     </Container>
   );
 }

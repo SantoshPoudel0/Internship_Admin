@@ -1,44 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Spinner, Alert, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../../utils/constants';
+import React, { useState, useEffect, useContext } from 'react';
+import { Container, Table, Button, Spinner, Alert, Badge, Modal } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const ContactsList = () => {
+  const { api, currentUser, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'new', 'read', 'responded'
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteContactId, setDeleteContactId] = useState(null);
 
   useEffect(() => {
+    // Redirect if not logged in
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const fetchContacts = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/api/contact`);
+        const { data } = await api.get('/api/contacts');
         setContacts(data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch contacts');
+        if (err.response?.status === 401) {
+          logout();
+          navigate('/login');
+        } else {
+          setError(err.response?.data?.message || 'Failed to fetch contacts');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchContacts();
-  }, []);
+  }, [api, currentUser, navigate, logout]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this message?')) {
-      try {
-        await axios.delete(`${API_URL}/api/contact/${id}`);
-        setContacts(contacts.filter(contact => contact._id !== id));
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to delete message');
-      }
+  const handleDeleteRequest = (id) => {
+    setDeleteContactId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteContactId) return;
+    try {
+      await api.delete(`/api/contacts/${deleteContactId}`);
+      setContacts(contacts.filter(contact => contact._id !== deleteContactId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete message');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteContactId(null);
     }
   };
 
   const handleStatusUpdate = async (id, status) => {
     try {
-      await axios.put(`${API_URL}/api/contact/${id}`, { status });
+      await api.put(`/api/contacts/${id}`, { status });
       setContacts(contacts.map(contact => 
         contact._id === id ? { ...contact, status } : contact
       ));
@@ -158,7 +179,7 @@ const ContactsList = () => {
                   <Button 
                     variant="danger" 
                     size="sm"
-                    onClick={() => handleDelete(contact._id)}
+                    onClick={() => handleDeleteRequest(contact._id)}
                   >
                     Delete
                   </Button>
@@ -168,6 +189,24 @@ const ContactsList = () => {
           )}
         </tbody>
       </Table>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Are you sure you want to delete this message?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDeleteConfirm}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

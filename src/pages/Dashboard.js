@@ -1,49 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faServer,
   faGraduationCap,
   faComments,
   faEnvelope,
   faUsers,
-  faBell
+  faBell,
+  faCalendarCheck,
+  faUtensils,
+  faStar
 } from '@fortawesome/free-solid-svg-icons';
-import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
 import { API_URL } from '../utils/constants';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
     counts: {
-      services: 0,
       trainings: 0,
       reviews: 0,
       pendingReviews: 0,
       contacts: 0,
       newContacts: 0,
-      users: 0
+      users: 0,
+      bookings: 0,
+      pendingBookings: 0,
+      menuItems: 0,
+      featuredMenuItems: 0
     },
     recentContacts: [],
-    recentReviews: []
+    recentReviews: [],
+    recentBookings: [],
+    recentMenuItems: []
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageLoadErrors, setImageLoadErrors] = useState({});
+  const { api, currentUser, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Redirect if not logged in
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/api/admin/dashboard`);
+        const { data } = await api.get('/api/admin/dashboard');
         setStats(data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch dashboard data');
+        console.error('Dashboard error:', err);
+        if (err.response?.status === 401) {
+          logout();
+          navigate('/login');
+        } else {
+          setError(err.response?.data?.message || 'Failed to fetch dashboard data');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [currentUser, api, navigate, logout]);
+
+  const handleImageError = (itemId) => {
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [itemId]: true
+    }));
+  };
+
+  const getImageUrl = (item) => {
+    if (imageLoadErrors[item._id]) {
+      return `/images/menu/${item.category.toLowerCase()}.png`;
+    }
+    return item.imageUrl && item.imageUrl !== 'default-menu-item.jpg'
+      ? `${API_URL}/uploads/${item.imageUrl}`
+      : `/images/menu/${item.category.toLowerCase()}.png`;
+  };
 
   if (loading) {
     return (
@@ -61,26 +100,13 @@ const Dashboard = () => {
     );
   }
 
-  const { counts, recentContacts, recentReviews } = stats;
+  const { counts, recentContacts, recentReviews, recentBookings, recentMenuItems } = stats;
 
   return (
     <Container fluid>
       <h2 className="mb-4">Dashboard</h2>
 
       <Row className="mb-4">
-        <Col md={4} lg={2} className="mb-3">
-          <Link to="/services" className="text-decoration-none">
-            <Card className="card-stats bg-light text-primary">
-              <Card.Body className="d-flex align-items-center">
-                <FontAwesomeIcon icon={faServer} className="dashboard-icon" />
-                <div>
-                  <h3>{counts.services}</h3>
-                  <p className="mb-0 text-muted">Services</p>
-                </div>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
         <Col md={4} lg={2} className="mb-3">
           <Link to="/trainings" className="text-decoration-none">
             <Card className="card-stats bg-light text-success">
@@ -95,26 +121,26 @@ const Dashboard = () => {
           </Link>
         </Col>
         <Col md={4} lg={2} className="mb-3">
-          <Link to="/reviews" className="text-decoration-none">
+          <Link to="/bookings" className="text-decoration-none">
             <Card className="card-stats bg-light text-warning">
               <Card.Body className="d-flex align-items-center">
-                <FontAwesomeIcon icon={faComments} className="dashboard-icon" />
+                <FontAwesomeIcon icon={faCalendarCheck} className="dashboard-icon" />
                 <div>
-                  <h3>{counts.reviews}</h3>
-                  <p className="mb-0 text-muted">Reviews</p>
+                  <h3>{counts.bookings}</h3>
+                  <p className="mb-0 text-muted">Bookings</p>
                 </div>
               </Card.Body>
             </Card>
           </Link>
         </Col>
         <Col md={4} lg={2} className="mb-3">
-          <Link to="/reviews" className="text-decoration-none">
+          <Link to="/bookings" className="text-decoration-none">
             <Card className="card-stats bg-light text-danger">
               <Card.Body className="d-flex align-items-center">
                 <FontAwesomeIcon icon={faBell} className="dashboard-icon" />
                 <div>
-                  <h3>{counts.pendingReviews}</h3>
-                  <p className="mb-0 text-muted">Pending Reviews</p>
+                  <h3>{counts.pendingBookings}</h3>
+                  <p className="mb-0 text-muted">Pending Bookings</p>
                 </div>
               </Card.Body>
             </Card>
@@ -141,6 +167,19 @@ const Dashboard = () => {
                 <div>
                   <h3>{counts.users}</h3>
                   <p className="mb-0 text-muted">Users</p>
+                </div>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+        <Col md={4} lg={2} className="mb-3">
+          <Link to="/menu-items" className="text-decoration-none">
+            <Card className="card-stats bg-light text-primary">
+              <Card.Body className="d-flex align-items-center">
+                <FontAwesomeIcon icon={faUtensils} className="dashboard-icon" />
+                <div>
+                  <h3>{counts.menuItems}</h3>
+                  <p className="mb-0 text-muted">Menu Items</p>
                 </div>
               </Card.Body>
             </Card>
@@ -192,34 +231,90 @@ const Dashboard = () => {
         <Col md={6} className="mb-4">
           <Card>
             <Card.Header className="bg-light">
-              <h5 className="mb-0">Recent Reviews</h5>
+              <h5 className="mb-0">Recent Bookings</h5>
             </Card.Header>
             <Card.Body>
-              {recentReviews.length === 0 ? (
-                <p className="text-center text-muted">No recent reviews</p>
+              {recentBookings.length === 0 ? (
+                <p className="text-center text-muted">No recent bookings</p>
               ) : (
                 <Table hover responsive>
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Rating</th>
+                      <th>Training</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {recentReviews.map((review) => (
-                      <tr key={review._id}>
+                    {recentBookings.map((booking) => (
+                      <tr key={booking._id}>
                         <td>
-                          <Link to={`/reviews/${review._id}`}>{review.user.name}</Link>
+                          <Link to={`/bookings/${booking._id}`}>{booking.name}</Link>
+                        </td>
+                        <td>{booking.trainingTitle}</td>
+                        <td>
+                          <span className={`badge bg-${
+                            booking.status === 'pending' ? 'warning' : 
+                            booking.status === 'confirmed' ? 'success' : 'danger'
+                          }`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+      
+      <Row>
+        <Col md={12} className="mb-4">
+          <Card>
+            <Card.Header className="bg-light">
+              <h5 className="mb-0">Recent Menu Items</h5>
+            </Card.Header>
+            <Card.Body>
+              {recentMenuItems.length === 0 ? (
+                <p className="text-center text-muted">No menu items added recently</p>
+              ) : (
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Name</th>
+                      <th>Price</th>
+                      <th>Category</th>
+                      <th>Available</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentMenuItems.map((item) => (
+                      <tr key={item._id}>
+                        <td>
+                          <img 
+                            src={getImageUrl(item)}
+                            alt={item.name}
+                            onError={() => handleImageError(item._id)}
+                            style={{ 
+                              width: '40px', 
+                              height: '40px', 
+                              objectFit: 'cover',
+                              backgroundColor: '#f8f9fa'
+                            }}
+                            loading="lazy"
+                          />
                         </td>
                         <td>
-                          {Array(5).fill().map((_, i) => (
-                            <span key={i} style={{ color: i < review.rating ? '#ffc107' : '#e4e5e9' }}>★</span>
-                          ))}
+                          <Link to={`/menu-items/edit/${item._id}`}>{item.name}</Link>
                         </td>
+                        <td>Rs. {item.price}</td>
+                        <td>{item.category}</td>
                         <td>
-                          <span className={`badge bg-${review.approved ? 'success' : 'danger'}`}>
-                            {review.approved ? 'Approved' : 'Pending'}
+                          <span className={`badge bg-${item.available ? 'success' : 'danger'}`}>
+                            {item.available ? 'Available' : 'Unavailable'}
                           </span>
                         </td>
                       </tr>

@@ -13,6 +13,9 @@ const TrainingForm = () => {
     title: '',
     description: '',
     duration: '',
+    level: 'All Levels',
+    format: 'Physical/Online Class',
+    careerProspect: 'Industry Professional',
     price: 0,
     discount: 0,
     featured: false,
@@ -365,6 +368,55 @@ const TrainingForm = () => {
                 </Form.Group>
               </Col>
               
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="level">
+                  <Form.Label>Training Level</Form.Label>
+                  <Form.Select
+                    name="level"
+                    value={training.level}
+                    onChange={handleChange}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="All Levels">All Levels</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="format">
+                  <Form.Label>Format</Form.Label>
+                  <Form.Select
+                    name="format"
+                    value={training.format}
+                    onChange={handleChange}
+                  >
+                    <option value="Physical">Physical</option>
+                    <option value="Online">Online</option>
+                    <option value="Physical/Online Class">Physical/Online Class</option>
+                    <option value="Hybrid">Hybrid</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="careerProspect">
+                  <Form.Label>Career Prospect</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="careerProspect"
+                    placeholder="e.g. Barista/Coffee Professional"
+                    value={training.careerProspect}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="image">
                   <Form.Label>Training Image</Form.Label>

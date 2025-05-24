@@ -4,15 +4,18 @@ import { Nav, Button } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faGauge,
-  faServer,
   faGraduationCap,
   faComments,
   faEnvelope,
   faUsers,
   faRightFromBracket,
-  faCalendarCheck
+  faCalendarCheck,
+  faHome,
+  faCalendar,
+  faUtensils
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../context/AuthContext';
+import './Sidebar.css';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -28,14 +31,10 @@ const Sidebar = () => {
       <div className="sidebar-header p-4 text-white text-center">
         <h3>Admin Panel</h3>
       </div>
-      <div className="sidebar-menu flex-grow-1">
+      <div className="sidebar-menu">
         <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>
           <FontAwesomeIcon icon={faGauge} className="me-2" />
           Dashboard
-        </NavLink>
-        <NavLink to="/services" className={({ isActive }) => isActive ? 'active' : ''}>
-          <FontAwesomeIcon icon={faServer} className="me-2" />
-          Services
         </NavLink>
         <NavLink to="/trainings" className={({ isActive }) => isActive ? 'active' : ''}>
           <FontAwesomeIcon icon={faGraduationCap} className="me-2" />
@@ -52,6 +51,10 @@ const Sidebar = () => {
         <NavLink to="/users" className={({ isActive }) => isActive ? 'active' : ''}>
           <FontAwesomeIcon icon={faUsers} className="me-2" />
           Users
+        </NavLink>
+        <NavLink to="/menu-items" className={({ isActive }) => isActive ? 'active' : ''}>
+          <FontAwesomeIcon icon={faUtensils} className="me-2" />
+          Menu Items
         </NavLink>
       </div>
       <div className="sidebar-footer p-3">

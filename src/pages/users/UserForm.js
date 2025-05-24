@@ -8,9 +8,9 @@ import { AuthContext } from '../../context/AuthContext';
 const UserForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, loading: authLoading } = useContext(AuthContext);
   const isEditMode = Boolean(id);
-  const isEditingSelf = currentUser._id === id;
+  const isEditingSelf = currentUser && currentUser._id === id;
   
   const [user, setUser] = useState({
     name: '',
@@ -22,20 +22,43 @@ const UserForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validated, setValidated] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [authLoading, currentUser, navigate]);
   
   useEffect(() => {
-    if (isEditMode) {
+    if (isEditMode && currentUser) {
       const fetchUser = async () => {
         try {
           setLoading(true);
-          const { data } = await axios.get(`${API_URL}/api/admin/users/${id}`);
-          // Don't include password in form for editing
-          setUser({ 
-            name: data.name,
-            email: data.email,
-            password: '',
-            isAdmin: data.isAdmin
-          });
+          
+          if (isEditingSelf) {
+            setUser({
+              _id: currentUser._id,
+              name: currentUser.name,
+              email: currentUser.email,
+              password: '',
+              isAdmin: currentUser.isAdmin
+            });
+          } else {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get(`${API_URL}/api/admin/users/${id}`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            setUser({ 
+              _id: data._id,
+              name: data.name,
+              email: data.email,
+              password: '',
+              isAdmin: data.isAdmin
+            });
+          }
         } catch (err) {
           setError(err.response?.data?.message || 'Failed to fetch user details');
         } finally {
@@ -45,7 +68,7 @@ const UserForm = () => {
       
       fetchUser();
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, isEditingSelf, currentUser]);
   
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -65,51 +88,81 @@ const UserForm = () => {
       return;
     }
     
-    // Check if passwords match
-    if (!isEditMode || (isEditMode && user.password)) {
-      if (user.password !== confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
+    // Check if passwords match when password is being changed
+    if (user.password && user.password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
     }
     
     setValidated(true);
     setLoading(true);
     
     try {
-      if (isEditMode) {
-        // Only include password if it's been changed
-        const userData = { ...user };
-        if (!userData.password) {
-          delete userData.password;
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         }
-        await axios.put(`${API_URL}/api/admin/users/${id}`, userData);
-      } else {
-        await axios.post(`${API_URL}/api/admin/users`, user);
+      };
+
+      // Prepare update data
+      const userData = {
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin
+      };
+
+      // Only include password if it's been changed and not empty
+      if (user.password && user.password.trim() !== '') {
+        userData.password = user.password;
       }
+
+      if (isEditMode) {
+        const response = await axios.put(`${API_URL}/api/admin/users/${id}`, userData, config);
+        
+        // If editing self, update local storage with the response data
+        if (isEditingSelf && response.data) {
+          const updatedUser = {
+            ...currentUser,
+            ...response.data
+          };
+          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        }
+      } else {
+        await axios.post(`${API_URL}/api/admin/users`, userData, config);
+      }
+      
       navigate('/users');
     } catch (err) {
+      console.error('Error updating user:', err);
       setError(err.response?.data?.message || 'Failed to save user');
+    } finally {
       setLoading(false);
     }
   };
   
-  if (loading && isEditMode) {
+  if (authLoading || (loading && isEditMode)) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '70vh' }}>
         <Spinner animation="border" variant="primary" />
       </div>
     );
   }
-  
+
+  if (!currentUser) {
+    return null;
+  }
+
   return (
-    <Container>
-      <h2 className="mb-4">{isEditMode ? 'Edit User' : 'Add New User'}</h2>
-      
-      {error && <Alert variant="danger">{error}</Alert>}
-      
+    <Container fluid>
       <Card>
+        <Card.Header>
+          <h2>{isEditMode ? 'Edit User' : 'Add New User'}</h2>
+        </Card.Header>
         <Card.Body>
+          {error && <Alert variant="danger">{error}</Alert>}
+          
           <Form noValidate validated={validated} onSubmit={handleSubmit}>
             <Form.Group className="mb-3" controlId="name">
               <Form.Label>Name</Form.Label>
@@ -150,9 +203,10 @@ const UserForm = () => {
                 value={user.password}
                 onChange={handleChange}
                 required={!isEditMode}
+                minLength={6}
               />
               <Form.Control.Feedback type="invalid">
-                Please provide a password.
+                Please provide a password (minimum 6 characters).
               </Form.Control.Feedback>
             </Form.Group>
             
@@ -163,7 +217,8 @@ const UserForm = () => {
                 placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required={!isEditMode || (isEditMode && user.password)}
+                required={!isEditMode || user.password !== ''}
+                minLength={6}
               />
               <Form.Control.Feedback type="invalid">
                 Please confirm your password.
@@ -177,7 +232,7 @@ const UserForm = () => {
                 label="Admin User"
                 checked={user.isAdmin}
                 onChange={handleChange}
-                disabled={isEditingSelf} // Prevent removing own admin rights
+                disabled={isEditingSelf}
               />
               {isEditingSelf && (
                 <Form.Text className="text-muted">
@@ -186,12 +241,12 @@ const UserForm = () => {
               )}
             </Form.Group>
             
-            <div className="d-flex gap-2">
-              <Button variant="primary" type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save User'}
-              </Button>
-              <Button variant="outline-secondary" onClick={() => navigate('/users')}>
+            <div className="d-flex justify-content-end gap-2">
+              <Button variant="secondary" onClick={() => navigate('/users')}>
                 Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </Form>

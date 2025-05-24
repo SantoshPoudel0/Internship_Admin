@@ -6,6 +6,11 @@ import Spinner from 'react-bootstrap/Spinner';
 const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useContext(AuthContext);
 
+  // Always allow access in development
+  if (process.env.NODE_ENV === 'development') {
+    return children;
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>

@@ -6,7 +6,6 @@ import { AuthContext } from '../context/AuthContext';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [validated, setValidated] = useState(false);
   const navigate = useNavigate();
   const { login, currentUser, loading, error } = useContext(AuthContext);
 
@@ -19,14 +18,10 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const form = e.currentTarget;
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
+    if (!email || !password) {
       return;
     }
 
-    setValidated(true);
     const success = await login(email, password);
     if (success) {
       navigate('/');
@@ -46,7 +41,7 @@ const Login = () => {
 
               {error && <Alert variant="danger">{error}</Alert>}
 
-              <Form noValidate validated={validated} onSubmit={handleSubmit}>
+              <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3" controlId="email">
                   <Form.Label>Email</Form.Label>
                   <Form.Control
@@ -56,9 +51,6 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
-                  <Form.Control.Feedback type="invalid">
-                    Please provide a valid email.
-                  </Form.Control.Feedback>
                 </Form.Group>
 
                 <Form.Group className="mb-4" controlId="password">
@@ -70,9 +62,6 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                  <Form.Control.Feedback type="invalid">
-                    Please provide a password.
-                  </Form.Control.Feedback>
                 </Form.Group>
 
                 <Button
